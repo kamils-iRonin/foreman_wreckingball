@@ -17,8 +17,8 @@ module ForemanWreckingball
 
     config.autoload_paths += Dir["#{config.root}/app/lib"]
     config.autoload_paths += Dir["#{config.root}/app/services"]
-    config.autoload_paths += Dir["#{config.root}/app/models/concerns"]
-    config.autoload_paths += Dir["#{config.root}/app/helpers/concerns"]
+    config.autoload_paths += Dir["#{config.root}/app/models"]
+    config.autoload_paths += Dir["#{config.root}/app/helpers"]
 
     initializer 'foreman_wreckingball.register_paths' do |_app|
       ::ForemanTasks.dynflow.config.eager_load_paths.concat(%W[#{ForemanWreckingball::Engine.root}/app/lib/actions])
@@ -43,6 +43,18 @@ module ForemanWreckingball
     initializer 'foreman_wreckingball.register_plugin', :before => :finisher_hook do |_app|
       Foreman::Plugin.register :foreman_wreckingball do
         requires_foreman '>= 1.21'
+
+        automatic_assets(false)
+        precompile_assets(
+          [
+            'foreman_wreckingball/status_hosts_table.css',
+            'foreman_wreckingball/status_managed_hosts_dashboard.css',
+            'foreman_wreckingball/modal.js',
+            'foreman_wreckingball/status_hosts_table.js',
+            'foreman_wreckingball/status_managed_hosts_dashboard.js',
+            'foreman_wreckingball/status_row.js'
+          ]
+        )
 
         security_block :foreman_wreckingball do
           permission :refresh_vmware_status_hosts, {
@@ -97,29 +109,25 @@ module ForemanWreckingball
 
     # Include concerns in this config.to_prepare block
     config.to_prepare do
-      begin
-        ::HostStatus.extend(ForemanWreckingball::HostStatusExtensions)
+      ::HostStatus.extend(ForemanWreckingball::HostStatusExtensions)
 
-        ::ComputeResource.send(:include, ForemanWreckingball::ComputeResourceExtensions)
-        ::Foreman::Model::Vmware.send(:include, ForemanWreckingball::VmwareExtensions)
-        ::Host::Managed.send(:include, ForemanWreckingball::HostExtensions)
-        ::Host::Managed.send(:include, ForemanWreckingball::VmwareFacetHostExtensions)
-        ::Host::Managed.send(:include, ForemanWreckingball::VmwareHypervisorFacetHostExtensions)
-        ::HostsHelper.send(:include, ForemanWreckingball::HostsHelperExtensions)
-        ::User.send(:include, ForemanWreckingball::UserExtensions)
-        ::Usergroup.send(:include, ForemanWreckingball::UsergroupExtensions)
+      ::ComputeResource.send(:include, ForemanWreckingball::ComputeResourceExtensions)
+      ::Foreman::Model::Vmware.send(:include, ForemanWreckingball::VmwareExtensions)
+      ::Host::Managed.send(:include, ForemanWreckingball::HostExtensions)
+      ::Host::Managed.send(:include, ForemanWreckingball::VmwareFacetHostExtensions)
+      ::Host::Managed.send(:include, ForemanWreckingball::VmwareHypervisorFacetHostExtensions)
+      ::HostsHelper.send(:include, ForemanWreckingball::HostsHelperExtensions)
+      ::User.send(:include, ForemanWreckingball::UserExtensions)
+      ::Usergroup.send(:include, ForemanWreckingball::UsergroupExtensions)
 
-        if ForemanWreckingball.fog_patches_required?
-          ForemanWreckingball.fog_vsphere_namespace::Host.send(:include, FogExtensions::ForemanWreckingball::Vsphere::Host)
-          ForemanWreckingball.fog_vsphere_namespace::Server.send(:include, FogExtensions::ForemanWreckingball::Vsphere::Server)
-          ForemanWreckingball.fog_vsphere_namespace::Real.send(:include, FogExtensions::ForemanWreckingball::Vsphere::Real)
-          ForemanWreckingball.fog_vsphere_namespace::Mock.send(:include, FogExtensions::ForemanWreckingball::Vsphere::Mock)
-        end
-      rescue StandardError => e
-        Rails.logger.warn "ForemanWreckingball: skipping engine hook (#{e})\n#{e.backtrace.join("\n")}"
+      if ForemanWreckingball.fog_patches_required?
+        ForemanWreckingball.fog_vsphere_namespace::Host.send(:include, FogExtensions::ForemanWreckingball::Vsphere::Host)
+        ForemanWreckingball.fog_vsphere_namespace::Server.send(:include, FogExtensions::ForemanWreckingball::Vsphere::Server)
+        ForemanWreckingball.fog_vsphere_namespace::Real.send(:include, FogExtensions::ForemanWreckingball::Vsphere::Real)
+        ForemanWreckingball.fog_vsphere_namespace::Mock.send(:include, FogExtensions::ForemanWreckingball::Vsphere::Mock)
       end
-
-      # load 'foreman_wreckingball/scheduled_jobs.rb'
+    rescue StandardError => e
+      Rails.logger.warn "ForemanWreckingball: skipping engine hook (#{e})\n#{e.backtrace.join("\n")}"
     end
 
     initializer 'foreman_wreckingball.register_gettext', after: :load_config_initializers do |_app|
