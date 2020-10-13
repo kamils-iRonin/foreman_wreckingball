@@ -24,7 +24,7 @@ class Host::ManagedTest < ActiveSupport::TestCase
         FactoryBot.create(:host, :managed, owner: usergroup_with_user),
         FactoryBot.create(:host, :managed, owner: FactoryBot.create(:usergroup, usergroups: [usergroup_with_user]))
       ]
-      actual = Host::Managed.owned_by_current_user_or_group_with_current_user
+      actual = Host::Managed.owned_by_current_user_or_group_with_current_user.all
 
       assert_same_elements expected, actual
     end
